@@ -65,7 +65,7 @@ namespace KingNetwork.Benchmarks.Load
                
             }).Start();
 
-            _server.Start();
+            _server.Start(NetworkListenerType.UDP);
         }
 
         /// <summary>

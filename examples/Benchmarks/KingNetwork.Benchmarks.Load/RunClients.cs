@@ -60,7 +60,7 @@ namespace KingNetwork.Benchmarks.Load
 
                 client.MessageReceivedHandler = OnMessageReceived;
 
-                client.Connect(ip);
+                client.Connect(ip, listenerType: NetworkListenerType.UDP);
                 clients.Add(client);
 
                 Thread.Sleep(15);

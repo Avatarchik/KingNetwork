@@ -206,8 +206,8 @@ namespace KingNetwork.Server
         /// Method responsible for start the async network listener.
         /// </summary>
         /// <param name="cancellationToken">The cancellation token for the task execution.</param>
-        /// <param name="listenerType">The listener type to creation of listener, the default value is NetworkListenerType.TCP.</param>
-        private async Task StartListenerAsync(CancellationToken cancellationToken, NetworkListenerType listenerType = NetworkListenerType.TCP)
+        /// <param name="listenerType">The listener type to creation of listener,.</param>
+        private async Task StartListenerAsync(CancellationToken cancellationToken, NetworkListenerType listenerType)
         {
             try
             {

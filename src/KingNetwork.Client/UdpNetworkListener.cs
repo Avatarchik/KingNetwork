@@ -2,6 +2,7 @@ using KingNetwork.Shared;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace KingNetwork.Client
 {
@@ -22,6 +23,16 @@ namespace KingNetwork.Client
 
         #endregion
 
+        private const int bufSize = 4096;
+        private State state = new State();
+        private EndPoint _endPointFrom = new IPEndPoint(IPAddress.Any, 0);
+        private AsyncCallback recv = null;
+
+        public class State
+        {
+            public byte[] buffer = new byte[bufSize];
+        }
+
         #region public methods implementation
 
         /// <summary>
@@ -36,22 +47,40 @@ namespace KingNetwork.Client
             {
                 _remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
-                _listener = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                _listener.ReceiveBufferSize = maxMessageBuffer;
-                _listener.SendBufferSize = maxMessageBuffer;
+                _listener = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                //_listener.ReceiveBufferSize = maxMessageBuffer;
+                //_listener.SendBufferSize = maxMessageBuffer;
 
-                _listener.Bind(new IPEndPoint(_remoteEndPoint.Address, 0));
-                _listener.Connect(_remoteEndPoint);
+                //_listener.Bind(new IPEndPoint(_remoteEndPoint.Address, 0));
+                //_listener.Connect(_remoteEndPoint);
 
-                _buffer = new byte[maxMessageBuffer];
-                _stream = new NetworkStream(_listener);
-                
-                _stream.BeginRead(_buffer, 0, _listener.ReceiveBufferSize, ReceiveDataCallback, null);
+                _listener.Connect(IPAddress.Parse(ip), port);
+                Receive();
+
+                //_buffer = new byte[maxMessageBuffer];
+                //_stream = new NetworkStream(_listener);
+
+                //_stream.BeginRead(_buffer, 0, _listener.ReceiveBufferSize, ReceiveDataCallback, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}.");
             }
+        }
+
+
+        private void Receive()
+        {
+            _listener.BeginReceiveFrom(state.buffer, 0, bufSize, SocketFlags.None, ref _endPointFrom, recv = (ar) =>
+            {
+                State so = (State)ar.AsyncState;
+                int bytes = _listener.EndReceiveFrom(ar, ref _endPointFrom);
+                _listener.BeginReceiveFrom(so.buffer, 0, bufSize, SocketFlags.None, ref _endPointFrom, recv, so);
+
+                _messageReceivedHandler(new KingBuffer(state.buffer));
+
+                //Console.WriteLine("CLIENT RECV: {0}: {1}, {2}", _endPointFrom.ToString(), bytes, Encoding.ASCII.GetString(so.buffer, 0, bytes));
+            }, state);
         }
 
         /// <summary>
@@ -62,12 +91,26 @@ namespace KingNetwork.Client
         {
             try
             {
-                _stream.BeginWrite(kingBuffer.ToArray(), 0, kingBuffer.Length(), null, null);
+                var data = kingBuffer.ToArray();
+
+                _listener.BeginSend(data, 0, data.Length, SocketFlags.None, (ar) =>
+                {
+                    State so = (State)ar.AsyncState;
+                    int bytes = _listener.EndSend(ar);
+                    //Console.WriteLine("CLIENT SEND: {0}, {1}", bytes, kingBuffer.ReadString());
+                }, state);
+
+                //_stream.BeginWrite(kingBuffer.ToArray(), 0, kingBuffer.Length(), null, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}.");
             }
+        }
+
+        public void Send(string text)
+        {
+            
         }
 
         #endregion
